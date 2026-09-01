@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The 2–4–6 Game</title>
+  <style>
+    :root {
+      --bg: #f6f6f4;
+      --card: #ffffff;
+      --text: #1c1c1c;
+      --muted: #666;
+      --line: #e2e2de;
+      --accent: #1f4e79;
+      --accent-soft: #e8eef5;
+      --yes: #1d7a46;
+      --yes-soft: #e4f3ea;
+      --no: #b3261e;
+      --no-soft: #fbe9e7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+    }
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 32px 20px 64px;
+    }
+    h1 { font-size: 1.7rem; margin: 0 0 6px; }
+    h2 { font-size: 1.25rem; margin: 0 0 12px; }
+    h3 { font-size: 1.05rem; margin: 20px 0 6px; }
+    p { margin: 0 0 12px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .seq {
+      display: inline-block;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 1.5rem;
+      letter-spacing: 0.08em;
+      background: var(--accent-soft);
+      color: var(--accent);
+      padding: 6px 18px;
+      border-radius: 8px;
+      margin: 6px 0 14px;
+    }
+    label { display: block; font-weight: 600; margin: 14px 0 6px; }
+    .hint { color: var(--muted); font-size: 0.9rem; margin-top: -2px; }
+    textarea, input[type="number"] {
+      width: 100%;
+      font: inherit;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+    textarea { min-height: 80px; resize: vertical; }
+    textarea:focus, input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+    .triple { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .triple input { text-align: center; font-size: 1.2rem; }
+    .conf-row { display: flex; align-items: center; gap: 14px; }
+    input[type="range"] { flex: 1; accent-color: var(--accent); }
+    .conf-val { min-width: 56px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+    button {
+      font: inherit;
+      font-weight: 600;
+      padding: 11px 20px;
+      border-radius: 8px;
+      border: 1px solid var(--accent);
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      margin-top: 18px;
+    }
+    button:hover { filter: brightness(1.08); }
+    button.secondary { background: #fff; color: var(--accent); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .error { color: var(--no); font-size: 0.9rem; margin-top: 8px; min-height: 1.2em; }
+    .feedback {
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin: 12px 0 4px;
+      font-weight: 600;
+    }
+    .feedback.yes { background: var(--yes-soft); color: var(--yes); }
+    .feedback.no { background: var(--no-soft); color: var(--no); }
+    .rule-reveal {
+      background: var(--accent-soft);
+      border-left: 4px solid var(--accent);
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin: 10px 0 16px;
+    }
+    .round-tag { color: var(--muted); font-size: 0.9rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+    th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; font-size: 0.85rem; }
+    td.mono { font-family: Consolas, Menlo, monospace; white-space: nowrap; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.8rem; font-weight: 600; }
+    .tag.yes { background: var(--yes-soft); color: var(--yes); }
+    .tag.no { background: var(--no-soft); color: var(--no); }
+    .hidden { display: none !important; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 10px 0 18px; }
+    .stat { background: var(--bg); border-radius: 8px; padding: 12px; text-align: center; }
+    .stat .num { font-size: 1.5rem; font-weight: 700; }
+    .stat .lbl { font-size: 0.8rem; color: var(--muted); }
+    .choice { display: flex; gap: 10px; flex-wrap: wrap; }
+    .choice button { margin-top: 10px; }
+    .verdict { font-weight: 700; margin-top: 12px; }
+    @media (max-width: 480px) { .stats { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<main>
+
+  <!-- ============ SCREEN 1: INTRO ============ -->
+  <section id="screen-intro">
+    <h1>The 2–4–6 Game</h1>
+    <p class="hint">A short exercise in how we test our ideas.</p>
+
+    <div class="card">
+      <p>The following sequence of three numbers is consistent with a simple mathematical rule:</p>
+      <div class="seq">2, 4, 6</div>
+      <p><strong>Order matters.</strong> Your job is to figure out the rule.</p>
+      <p>Before you test anything, write down what you currently think the rule is.</p>
+
+      <label for="intro-rule">What do you think the rule is?</label>
+      <textarea id="intro-rule" placeholder="e.g., each number is..."></textarea>
+
+      <p class="hint" style="margin-top:14px">
+        Next, you'll test sets of numbers of your own. After each test you'll restate the rule and say how confident you are (0–100%).
+        The game ends, and you'll be told whether you were right or wrong, when you say you are
+        <strong>90% or more</strong> certain you've guessed the rule, or after <strong>10 rounds</strong>.
+      </p>
+
+      <div class="error" id="intro-error"></div>
+      <button id="intro-submit">Continue</button>
+    </div>
+  </section>
+
+  <!-- ============ SCREEN 2: ROUNDS ============ -->
+  <section id="screen-round" class="hidden">
+    <div class="round-tag" id="round-tag">Round 1 of 10</div>
+    <h2>Test a new set of numbers</h2>
+
+    <div class="card">
+      <!-- Step A: enter triple -->
+      <div id="step-triple">
+        <p>Enter a new set of three integers. I'll tell you whether your set <em>is</em> or <em>is not</em> consistent with the rule.</p>
+        <p class="hint">Negative numbers are allowed. Order matters.</p>
+        <div class="triple" id="triple-inputs">
+          <input type="number" step="1" id="n1" placeholder="1st" inputmode="numeric">
+          <input type="number" step="1" id="n2" placeholder="2nd" inputmode="numeric">
+          <input type="number" step="1" id="n3" placeholder="3rd" inputmode="numeric">
+        </div>
+        <div class="error" id="triple-error"></div>
+        <button id="triple-submit">Check this set</button>
+      </div>
+
+      <!-- Step B: feedback + new guess -->
+      <div id="step-guess" class="hidden">
+        <p>Your set: <span class="seq" id="tested-seq" style="font-size:1.15rem"></span></p>
+        <div class="feedback" id="feedback"></div>
+
+        <label for="round-rule">Now, what do you think the rule is?</label>
+        <textarea id="round-rule"></textarea>
+
+        <label for="round-conf">How confident are you that this is the rule?</label>
+        <div class="conf-row">
+          <input type="range" id="round-conf" min="0" max="100" step="5" value="50">
+          <span class="conf-val" id="round-conf-val">50%</span>
+        </div>
+
+        <p class="hint" style="margin-top:14px">
+          The game ends, and you'll be told whether you were right or wrong, when you say you are
+          <strong>90% or more</strong> certain, or after 10 rounds.
+        </p>
+
+        <div class="error" id="round-error"></div>
+        <button id="round-submit">Submit guess</button>
+      </div>
+    </div>
+
+    <div class="card" id="history-card">
+      <h3 style="margin-top:0">Sets you've tested</h3>
+      <table>
+        <thead><tr><th>#</th><th>Set</th><th>Consistent?</th></tr></thead>
+        <tbody id="history-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ SCREEN 3: END ============ -->
+  <section id="screen-end" class="hidden">
+    <h2 id="end-title">Game over</h2>
+
+    <div class="card">
+      <p id="end-reason"></p>
+      <h3>The rule</h3>
+      <div class="rule-reveal">
+        <strong>The three numbers must be in increasing order.</strong><br>
+        <span class="hint">That's it. Any three integers where the first is less than the second and the second is less than the third — for example (−10, 3, 43534534) or (3, 4, 5).</span>
+      </div>
+
+      <h3>Your final guess</h3>
+      <p id="end-guess" style="font-style:italic"></p>
+      <p id="end-conf"></p>
+
+      <div id="self-assess">
+        <p><strong>Does your final guess match the rule?</strong> Be honest — "increasing by 2" or "even numbers going up" are <em>not</em> the same as "any increasing numbers."</p>
+        <div class="choice">
+          <button id="assess-yes">Yes, I had it</button>
+          <button id="assess-no" class="secondary">No, I had something narrower or different</button>
+        </div>
+      </div>
+      <p class="verdict" id="verdict"></p>
+    </div>
+
+    <div class="card hidden" id="lesson-card">
+      <h3 style="margin-top:0">What just happened</h3>
+      <div class="stats">
+        <div class="stat"><div class="num" id="stat-rounds">0</div><div class="lbl">sets tested</div></div>
+        <div class="stat"><div class="num" id="stat-yes">0</div><div class="lbl">got "consistent"</div></div>
+        <div class="stat"><div class="num" id="stat-no">0</div><div class="lbl">got "not consistent"</div></div>
+      </div>
+      <div id="lesson-body"></div>
+
+      <h3>Everything you submitted</h3>
+      <table>
+        <thead><tr><th>Round</th><th>Set tested</th><th>Result</th><th>Your rule</th><th>Conf.</th></tr></thead>
+        <tbody id="summary-body"></tbody>
+      </table>
+
+      <button id="play-again" class="secondary">Play again</button>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  const MAX_ROUNDS = 10;
+  const END_CONF = 90;
+
+  // The hidden rule.
+  function isConsistent(a, b, c) { return a < b && b < c; }
+
+  // ---------- state ----------
+  let state;
+  function reset() {
+    state = {
+      guesses: [],   // { round: 0..10, rule, conf }
+      tests: [],     // { round: 1..10, nums: [a,b,c], ok }
+      endReason: '',
+      selfAssess: null
+    };
+  }
+
+  // ---------- helpers ----------
+  const $ = (id) => document.getElementById(id);
+  const fmt = (nums) => nums.map(n => n < 0 ? '−' + Math.abs(n) : String(n)).join(', ');
+  function show(id) {
+    ['screen-intro', 'screen-round', 'screen-end'].forEach(s => $(s).classList.toggle('hidden', s !== id));
+    window.scrollTo(0, 0);
+  }
+  function bindSlider(rangeId, valId) {
+    const r = $(rangeId), v = $(valId);
+    const upd = () => v.textContent = r.value + '%';
+    r.addEventListener('input', upd); upd();
+  }
+  bindSlider('round-conf', 'round-conf-val');
+
+  function parseInteger(raw) {
+    const s = String(raw).trim().replace(/^−/, '-'); // allow a typed minus sign
+    if (!/^[-+]?\d+$/.test(s)) return null;
+    const n = Number(s);
+    return Number.isSafeInteger(n) ? n : null;
+  }
+
+  // ---------- intro ----------
+  $('intro-submit').addEventListener('click', () => {
+    const rule = $('intro-rule').value.trim();
+    if (!rule) { $('intro-error').textContent = 'Please write down your best guess at the rule.'; return; }
+    $('intro-error').textContent = '';
+    state.guesses.push({ round: 0, rule, conf: null });
+    startRound(1);
+  });
+
+  // ---------- rounds ----------
+  let round = 0;
+  function startRound(n) {
+    round = n;
+    $('round-tag').textContent = `Round ${n} of ${MAX_ROUNDS}`;
+    ['n1', 'n2', 'n3'].forEach(id => $(id).value = '');
+    $('triple-error').textContent = '';
+    $('round-error').textContent = '';
+    const prev = state.guesses[state.guesses.length - 1];
+    $('round-rule').value = prev.rule;
+    $('round-conf').value = prev.conf === null ? 50 : prev.conf;
+    $('round-conf').dispatchEvent(new Event('input'));
+    $('step-triple').classList.remove('hidden');
+    $('step-guess').classList.add('hidden');
+    show('screen-round');
+    $('n1').focus();
+  }
+
+  $('triple-submit').addEventListener('click', submitTriple);
+  ['n1', 'n2', 'n3'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') submitTriple(); }));
+
+  function submitTriple() {
+    const nums = ['n1', 'n2', 'n3'].map(id => parseInteger($(id).value));
+    if (nums.some(n => n === null)) {
+      $('triple-error').textContent = 'Please enter three whole numbers (integers). Decimals are not allowed.';
+      return;
+    }
+    $('triple-error').textContent = '';
+    const ok = isConsistent(nums[0], nums[1], nums[2]);
+    state.tests.push({ round, nums, ok });
+
+    $('tested-seq').textContent = fmt(nums);
+    const fb = $('feedback');
+    fb.className = 'feedback ' + (ok ? 'yes' : 'no');
+    fb.textContent = ok ? '✓ Yes — this set IS consistent with the rule.'
+                        : '✗ No — this set is NOT consistent with the rule.';
+    renderHistory();
+    $('step-triple').classList.add('hidden');
+    $('step-guess').classList.remove('hidden');
+    $('round-rule').focus();
+  }
+
+  function renderHistory() {
+    $('history-body').innerHTML = state.tests.map(t =>
+      `<tr><td>${t.round}</td><td class="mono">${fmt(t.nums)}</td>
+       <td><span class="tag ${t.ok ? 'yes' : 'no'}">${t.ok ? 'Yes' : 'No'}</span></td></tr>`).join('');
+  }
+
+  $('round-submit').addEventListener('click', () => {
+    const rule = $('round-rule').value.trim();
+    const conf = Number($('round-conf').value);
+    if (!rule) { $('round-error').textContent = 'Please write down your current guess at the rule.'; return; }
+    $('round-error').textContent = '';
+    state.guesses.push({ round, rule, conf });
+    if (conf >= END_CONF) { endGame('confident'); return; }
+    if (round >= MAX_ROUNDS) { endGame('rounds'); return; }
+    startRound(round + 1);
+  });
+
+  // ---------- end ----------
+  function endGame(reason) {
+    state.endReason = reason;
+    const last = state.guesses[state.guesses.length - 1];
+    $('end-reason').textContent = reason === 'confident'
+      ? `You said you were ${last.conf}% confident, so the game is over. Here's the rule.`
+      : `You've completed all ${MAX_ROUNDS} rounds, so the game is over. Here's the rule.`;
+    $('end-guess').textContent = '“' + last.rule + '”';
+    $('end-conf').textContent = `Stated confidence: ${last.conf}%` +
+      (state.tests.length ? ` after testing ${state.tests.length} set${state.tests.length === 1 ? '' : 's'}.` : ' without testing any sets.');
+    $('self-assess').classList.remove('hidden');
+    $('verdict').textContent = '';
+    $('lesson-card').classList.add('hidden');
+    show('screen-end');
+  }
+
+  $('assess-yes').addEventListener('click', () => finish(true));
+  $('assess-no').addEventListener('click', () => finish(false));
+
+  function finish(correct) {
+    state.selfAssess = correct;
+    const last = state.guesses[state.guesses.length - 1];
+    $('self-assess').classList.add('hidden');
+    $('verdict').textContent = correct
+      ? `You were right — and you were ${last.conf}% confident.`
+      : `You were wrong — and you were ${last.conf}% confident.`;
+    renderLesson(correct);
+    $('lesson-card').classList.remove('hidden');
+    $('lesson-card').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function renderLesson(correct) {
+    const tests = state.tests;
+    const yes = tests.filter(t => t.ok).length;
+    const no = tests.length - yes;
+    $('stat-rounds').textContent = tests.length;
+    $('stat-yes').textContent = yes;
+    $('stat-no').textContent = no;
+
+    const first = tests[0];
+    const firstIsPlusTwo = first && first.nums[1] - first.nums[0] === 2 && first.nums[2] - first.nums[1] === 2;
+    const firstIsEvenUp = first && first.nums.every(n => n % 2 === 0) && first.ok;
+    const firstIsArith = first && (first.nums[1] - first.nums[0] === first.nums[2] - first.nums[1]);
+
+    const parts = [];
+
+    if (firstIsPlusTwo) {
+      parts.push(`<p>Your first test was <strong>${fmt(first.nums)}</strong> — a set that goes up by 2, just like 2, 4, 6. That's the most common first move in this game. Notice what it does: if your hypothesis was "increasing by 2," this set would come back "consistent" whether the real rule was <em>increasing by 2</em>, <em>increasing even numbers</em>, <em>any arithmetic sequence</em>, or simply <em>increasing numbers</em>. A "yes" here couldn't tell those apart.</p>`);
+    } else if (firstIsArith || firstIsEvenUp) {
+      parts.push(`<p>Your first test was <strong>${fmt(first.nums)}</strong>. It follows the same pattern as 2, 4, 6 closely enough that a "yes" would fit many different rules at once — so it didn't narrow things down much.</p>`);
+    }
+
+    if (no === 0 && tests.length > 0) {
+      parts.push(`<p>Every one of your ${tests.length} test${tests.length === 1 ? '' : 's'} came back <strong>"consistent."</strong> That feels like progress — each yes seems to confirm you're on the right track. But a string of yeses is exactly what you'd see if your rule were <em>too narrow</em>. A set that gets a "no" is the only kind that can actually rule anything out. You never got one, so nothing was ever ruled out.</p>`);
+    } else if (no > 0) {
+      const firstNo = tests.find(t => !t.ok);
+      parts.push(`<p>You got ${no} "not consistent" result${no === 1 ? '' : 's'} — the first was <strong>${fmt(firstNo.nums)}</strong> in round ${firstNo.round}. ${no === 1 ? 'That was' : 'Those were'} your most informative test${no === 1 ? '' : 's'}: a "no" draws a boundary, and boundaries are what define a rule. Sets like (6, 4, 2), (5, 5, 5), or (3, 1, 8) do more work in one round than a dozen sets that go up by 2.</p>`);
+    }
+
+    parts.push(`<h3>Confirmation bias</h3>
+      <p>This is a version of a classic experiment by psychologist Peter Wason (1960). Most people form a hypothesis from the single example they're given, then test sets they expect to <em>pass</em>. Each pass feels like evidence, confidence climbs, and they announce a rule that's far more specific than the real one. The tendency to seek out information that agrees with what we already believe, and to feel reassured by it, is called <strong>confirmation bias</strong>.</p>
+      <p>The fix is counterintuitive: <strong>try to disprove your own idea.</strong> If you think the rule is "increasing by 2," the useful test isn't (8, 10, 12) — it's (1, 2, 3), or (10, 5, 1), or (−4, −4, −4). If those come back the way your rule predicts, your confidence has earned the right to go up. If they don't, you just learned something a hundred confirming tests never could have told you.</p>
+      <p>The same logic applies well beyond number games: to business ideas, research hypotheses, and everyday beliefs. The question that moves you forward is rarely "what would show I'm right?" It's "what would show I'm wrong — and have I actually checked?"</p>`);
+
+    if (correct && no > 0) {
+      parts.push(`<p><strong>You got the rule, and you got there by looking for a "no."</strong> That's the whole lesson, done well.</p>`);
+    } else if (correct && no === 0) {
+      parts.push(`<p><strong>You landed on the right rule</strong> — but notice you did it without ever seeing a set fail. Next time, ask yourself whether you'd have caught it if the rule had been different.</p>`);
+    }
+
+    $('lesson-body').innerHTML = parts.join('');
+
+    // Summary table: combine tests and guesses by round.
+    const rows = [];
+    const g0 = state.guesses.find(g => g.round === 0);
+    rows.push(`<tr><td>Start</td><td class="mono">2, 4, 6</td><td><span class="tag yes">Given</span></td><td>${esc(g0.rule)}</td><td>—</td></tr>`);
+    tests.forEach(t => {
+      const g = state.guesses.find(x => x.round === t.round);
+      rows.push(`<tr><td>${t.round}</td><td class="mono">${fmt(t.nums)}</td>
+        <td><span class="tag ${t.ok ? 'yes' : 'no'}">${t.ok ? 'Yes' : 'No'}</span></td>
+        <td>${g ? esc(g.rule) : '—'}</td><td>${g ? g.conf + '%' : '—'}</td></tr>`);
+    });
+    $('summary-body').innerHTML = rows.join('');
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  $('play-again').addEventListener('click', () => {
+    reset();
+    $('intro-rule').value = '';
+    $('history-body').innerHTML = '';
+    show('screen-intro');
+  });
+
+  reset();
+})();
+</script>
+</body>
+</html>
